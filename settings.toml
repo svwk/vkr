@@ -1,0 +1,133 @@
+DATA_LOCAL_DIR = 'data'
+MODEL_LOCAL_DIR = 'models'
+SCRIPT_DIR='scripts'
+
+RAW_DATA_LOCAL_SUBDIR = 'raw'
+PROCESSED_LOCAL_SUBDIR = 'processed'
+BLOCK_MODELING_SUBDIR = 'block_modeling'
+READY_DATA_LOCAL_SUBDIR = 'ready'
+
+MODEL_SCRIPT_SUBDIR = 'model_scripts'
+RUN_SCRIPT_SUBDIR = 'run'
+DATA_SCRIPT_SUBDIR = 'data_scripts'
+
+DATA_FILE_FORMAT = 'csv'
+DATA_ARCH_FORMAT = 'gz'
+
+FILENAME_CLEANED = 'cleaned'
+FILENAME_PROCESSED = 'processed'
+FILENAME_PREPROCESSED = 'preprocessed'
+FILENAME_DESCRIPTIONS_KEYSKILLS = 'descriptions_keyskills'
+FILENAME_BLOCKS_EXTRACTED = 'blocks_extracted'
+BLOCKS_EXTRACTED_SHRINKED = 'blocks_extracted_shrinked'
+FILENAME_BLOCKS_EXTRACTED_EDITED = 'blocks_extracted_ed'
+FILENAME_BLOCKS_SELECTED = 'blocks_selected'
+FILENAME_BLOCKS_TOKENIZED = 'blocks_tokenized'
+FILENAME_BLOCKS_LABELED = 'blocks_labeled'
+FILENAME_BLOCK_EMBEDDINGS = 'block_embeddings'
+FILENAME_KEY_SKILLS_EXTRACTED = 'keyskills_extracted'
+FILENAME_TITLES_EXTRACTED = 'titles_extracted'
+FILENAME_TITLES_EXTRACTED_ED = 'titles_extracted_ed'
+FILENAME_REQUIREMENT_EXTRACTED = 'requirements_extracted'
+FILENAME_REQUIREMENTS_TOKENIZED = 'requirements_tokenized'
+FILENAME_REQUIREMENTS_TOKENIZED_CLEANED = 'requirements_tokenized_cl'
+FILENAME_REQUIREMENTS_LABELED = 'requirements_labeled'
+FILENAME_EMB_SUFFIX = 'embeddings'
+FILENAME_UMAP_SUFFIX = 'umap'
+FILENAME_DBSCAN_SUFFIX = 'dbscan'
+FILENAME_SENT_CLUSTERS = 'sent_clusters'
+FILENAME_ALL_KEYWORD = 'all_keywords'
+FILENAME_CLUSTER_KEYWORDS = 'cluster_keywords'
+FILENAME_CLUSTER_DATA = 'cluster_data'
+
+
+FILENAME_BLOCK_CLASSIFICATION_MODEL = 'block_classification_model'
+FILENAME_BLOCK_VECTORIZATION_MODEL = 'block_vectorization_model'
+FILENAME_REQUIREMENT_VECTORIZATION_MODEL = 'requirement_vectorization_model'
+FILENAME_BLOCK_REDUCER_MODEL = 'block_reducer_model'
+FILENAME_REQUIREMENTS_CLUSTERING_MODEL = 'requirements_clustering_model'
+
+DAYS_BETWEEN_DOWNLOADS = 1
+
+STOP_WORDS_FOR_NAME=['стажер', 'senior', 'старший', 'middle', 'главный', 'ведущий', 'младший', 'junior']
+PUNCTUATION_MARKS = ['!', ',', '(', ')', ':', '?', '.', '..', '...', '«', '»', ';', '–', '--', '[', ']', '{', '}']
+RUSSIAN_SYMBOLS = ['А', 'а', 'Б', 'б', 'В', 'в', 'Г', 'г', 'Д', 'д', 'Е', 'е', 'Ё', 'ё', 'Ж', 'ж', 'З', 'з', 'И', 'и', 'Й', 'й', 'К', 'к', 'Л', 'л',
+    'М', 'м', 'Н', 'н', 'О', 'о', 'П', 'п', 'Р', 'р', 'С', 'с', 'Т', 'т', 'У', 'у', 'Ф', 'ф', 'Х', 'х', 'Ц', 'ц', 'Ч', 'чШшЩщЪъЫыЬьЭэЮюЯя']
+
+USER_AGENTS_PROXY_LIST='https://spb.hh.ru/search/vacancy?enable_snippets=true&ored_clusters=true&professional_role=160&professional_role=96&professional_role=124&search_period=1'
+
+N_CORES=6
+
+
+[mappers.EXPERIENCE_ID]
+noExperience=0
+between1And3=1
+between3And6=2
+moreThan6=3
+
+
+[mappers.SCHEDULE_ID]
+fullDay=0
+remote=1
+flexible=2
+shift=3
+flyInFlyOut=4
+
+
+[mappers.SALARY_CURRENCY]
+RUR=0
+USD=1
+KZT=2
+BYR=3
+EUR=4
+UZS=5
+UAH=6
+KGS=7
+AZN=8
+GEL=9
+
+
+[mappers.EMPLOYMENT_ID]
+full=0
+part=1
+probation=2
+project=3
+volunteer=4
+
+
+[mappers.SALARY_GROSS]
+False=0
+True=1
+
+
+[types.DEFAULT_VALUES]
+key_skills=''
+salary_gross=false
+salary_currency='RUR'
+employer_id=0
+salary_from=0
+salary_to=0
+
+
+[types.CSV_DTYPES]
+id='int64'
+description='str'
+key_skills='str'
+experience_id='uint8'
+employer_id='uint32'
+employer_name='str'
+salary_from='uint32'
+salary_to='uint32'
+salary_gross='uint8'
+salary_currency='uint8'
+name='str'
+short_name='str'
+area_id='uint16'
+area_name='str'
+
+
+
+
+
+
+
