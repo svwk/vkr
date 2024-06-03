@@ -13,6 +13,7 @@ import scripts.model_scripts.cluster_utils as cu
 from scripts.data_scripts import clear_text as cl
 import scripts.data_scripts.prepare_data as prep
 import scripts.model_scripts.text_process as proc
+from scripts.models.description_models import ParseResult, BlockData
 
 # Настройка параметров
 warnings.simplefilter("ignore")
@@ -44,8 +45,37 @@ MODELS = {
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Загрузка данных и моделей
 
-def process_vacancy(text):
+block_vectorization_filename = f'{CLASSIFICATION_MODEL_NAME}_{FILENAME_BLOCK_VECTORIZATION_MODEL}'
+block_vectorization_model = files.load_model(block_vectorization_filename)
+block_classification_model = files.load_model(FILENAME_BLOCK_CLASSIFICATION_MODEL)
+
+filename = settings.get_fresh('FILENAME_ALL_KEYWORD')
+all_keywords = files.load_file(filename, READY_DATA_LOCAL_SUBDIR, to_decompress=False, with_dates=False)
+
+filename = settings.get_fresh('FILENAME_CLUSTER_KEYWORDS')
+keywords = files.load_data_dump(filename, READY_DATA_LOCAL_SUBDIR)
+
+filename = settings.get_fresh('FILENAME_CLUSTER_DATA')
+cluster_data = files.load_file(filename, READY_DATA_LOCAL_SUBDIR, to_decompress=False, with_dates=False)
+
+# Присвоение меток классам, которые будут использоваться для отображения в вакансии
+labels = {}
+for cluster_key in keywords:
+    if len(keywords[cluster_key].most_common()) > 1:
+        key1 = keywords[cluster_key].most_common()[0][0]
+        key2 = keywords[cluster_key].most_common()[1][0]
+        if len(key2) > 0 and len(key2) >= len(key1) and key1 in key2:
+            labels[cluster_key] = key2
+        elif len(key1) > 0 and len(key1) > len(key2) and key2 in key1:
+            labels[cluster_key] = key1
+        elif len(key1) > 0:
+            labels[cluster_key] = key1
+    if len(keywords[cluster_key].most_common()) == 1:
+        labels[cluster_key] = keywords[cluster_key].most_common()[0][0]
+
+def process_vacancy(text) -> ParseResult:
     '''
     Извлечение текстовых блоков из описания вакансии
     :param text: Текст вакансии
@@ -53,38 +83,35 @@ def process_vacancy(text):
     '''
 
     if not isinstance(text, str):
-        return {'Ошибка': f"Неверный тип данных, {type(text)}"}
+        return ParseResult(message=f"Неверный тип данных, {type(text)}")
 
     if text is None or len(text) < 2:
-        return {'Ошибка': "Передан пустой текст"}
+        return ParseResult(message="Передан пустой текст")
 
-    # 2. Загрузка данных и моделей
+    if (not '>' in text) or (not '</' in text):
+        return ParseResult(message="Поле описания должно иметь html разметку")
 
-    block_vectorization_filename = f'{CLASSIFICATION_MODEL_NAME}_{FILENAME_BLOCK_VECTORIZATION_MODEL}'
-    block_vectorization_model = files.load_model(block_vectorization_filename)
-    block_classification_model = files.load_model(FILENAME_BLOCK_CLASSIFICATION_MODEL)
-
-    filename = settings.get_fresh('FILENAME_ALL_KEYWORD')
-    all_keywords = files.load_file(filename, READY_DATA_LOCAL_SUBDIR, to_decompress=False, with_dates=False)
-
-    filename = settings.get_fresh('FILENAME_CLUSTER_KEYWORDS')
-    keywords = files.load_data_dump(filename, READY_DATA_LOCAL_SUBDIR)
-
-    filename = settings.get_fresh('FILENAME_CLUSTER_DATA')
-    cluster_data = files.load_file(filename, READY_DATA_LOCAL_SUBDIR, to_decompress=False, with_dates=False)
 
     # 4.Обработка текста вакансии
     # 4.1. Извлечение текстовых блоков из описания вакансии
     item = cl.preprocess_description(text)
     content_dict = {}
     start_index = 0
+    block_datas = []
     index = prep.parse_description(0, item, content_dict, start_index)
+    if index is None or len(content_dict) == 0:
+        return ParseResult(message="Поле описания должно иметь html разметку")
 
-    df = pd.DataFrame.from_dict(content_dict, "index")
-    df['id'] = pd.to_numeric(df['id'], downcast='unsigned')
-    df['content_type'] = pd.to_numeric(df['content_type'], downcast='unsigned')
-    df['semantic_type'] = pd.to_numeric(df['semantic_type'], downcast='unsigned')
-    df.reset_index(drop=True, inplace=True, )
+    try:
+        df = pd.DataFrame.from_dict(content_dict, "index")
+        df['id'] = pd.to_numeric(df['id'], downcast='unsigned')
+
+        df['content_type'] = pd.to_numeric(df['content_type'], downcast='unsigned')
+        df['semantic_type'] = pd.to_numeric(df['semantic_type'], downcast='unsigned')
+        df.reset_index(drop=True, inplace=True, )
+    except BaseException as e:
+        return ParseResult(message=str(e))
+
 
     # 4.2. Классификация текстовых блоков объявлений
     # 4.2.1 Подготовка данных к классификации
@@ -112,6 +139,12 @@ def process_vacancy(text):
         block_id = content_dict[key]['block_id']
         if len(df_cl[df_cl.block_id == block_id]) > 0:
             content_dict[key]['semantic_type'] = list(df_cl[df_cl.block_id == block_id].target_type)[0]
+        block_datas.append(BlockData(block_id=block_id,
+                                     id_hh=content_dict[key]['id'],
+                                     title=content_dict[key]['title'],
+                                     content=content_dict[key]['content'],
+                                     content_type=content_dict[key]['content_type'],
+                                     semantic_type=content_dict[key]['semantic_type']))
 
     # 4.3. Извлечение требований
     list_items = proc.parse_requirements(df_selected)
@@ -119,21 +152,6 @@ def process_vacancy(text):
 
     # 4.4. Уточнение требований
     unigrams_counter, bigrams_counter, trigrams_counter = cu.get_all_skills(requirements_dict)
-
-    # Присвоение меток классам, которые будут использоваться для отображения в вакансии
-    labels = {}
-    for cluster_key in keywords:
-        if len(keywords[cluster_key].most_common()) > 1:
-            key1 = keywords[cluster_key].most_common()[0][0]
-            key2 = keywords[cluster_key].most_common()[1][0]
-            if len(key2) > 0 and len(key2) >= len(key1) and key1 in key2:
-                labels[cluster_key] = key2
-            elif len(key1) > 0 and len(key1) > len(key2) and key2 in key1:
-                labels[cluster_key] = key1
-            elif len(key1) > 0:
-                labels[cluster_key] = key1
-        if len(keywords[cluster_key].most_common()) == 1:
-            labels[cluster_key] = keywords[cluster_key].most_common()[0][0]
 
     # Определение основных и дополнительных навыков
     key_skills = set()
@@ -154,13 +172,7 @@ def process_vacancy(text):
 
     add_skills = add_skills - key_skills
 
-    result = {}
-
-    result['key_skills'] = key_skills
-    result['add_skills'] = add_skills
-    result['content'] = content_dict
-
-    return result
+    return ParseResult(is_success=True, key_skills=key_skills, add_skills=add_skills, content=block_datas)
 
 
 if __name__ == "__main__":
@@ -171,9 +183,10 @@ if __name__ == "__main__":
     if namespace.file:
         data_file = namespace.file
 
-    if data_file is not None and  data_file != '':
+    if data_file is not None and data_file != '':
         with open(data_file, 'r') as file:
             content = file.read()
             response = process_vacancy(content)
-            pprint(response)
-
+            pprint(response.key_skills)
+            pprint(response.add_skills)
+            print(*[x.content for x in response.content])

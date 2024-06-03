@@ -4,38 +4,7 @@ import csv
 from config import settings
 
 from scripts.data_scripts import clear_text as cl
-
-
-class ContentTypes:
-    """
-    Тип содержимого блока
-    """
-    # текстовый
-    text = 0
-    # список
-    list = 1
-    # возможно список
-    list_br = 2
-    #  только заголовок
-    block_title = 3
-
-
-class SemanticTypes:
-    """
-    Семантический тип
-    """
-    # Неизвестное назначение
-    unknown = 0
-    # описание вакансии
-    description = 1
-    # обязанности
-    responsibilities = 2
-    # требования
-    requirements = 3
-    # желательные требования
-    desirable = 4
-    # условия работы
-    conditions = 5
+from scripts.models.description_models import SemanticTypes, ContentTypes
 
 
 def remove_unnamed_cols(dataframe):
@@ -346,7 +315,7 @@ def parse_description(id_hh, text, target_dict, start_index):
     old_title = ''
     old_content = ''
     old_index = start_index
-    content_type = ContentTypes.text
+    content_type = ContentTypes.text.value
     block_id = 1
 
     for item in soup.html.body.contents:
@@ -362,16 +331,16 @@ def parse_description(id_hh, text, target_dict, start_index):
             index = old_index + 1
             title = item.text.strip()
             content = ''
-            content_type = ContentTypes.block_title
+            content_type = ContentTypes.block_title.value
 
         elif item.name in ['ul', 'ol']:
             # Если это список
             content = '\n'.join([li.text for li in item.contents if len(li.text) > 0])
 
-            if old_index > 0 and content_type == ContentTypes.block_title and old_content == '':
+            if old_index > 0 and content_type == ContentTypes.block_title.value and old_content == '':
                 title = old_title
                 index = old_index
-            elif old_index > 0 and content_type == ContentTypes.list:
+            elif old_index > 0 and content_type == ContentTypes.list.value:
                 content = f'{old_content}\n{content}'
                 title = old_title
                 index = old_index
@@ -379,7 +348,7 @@ def parse_description(id_hh, text, target_dict, start_index):
                 title = ''
                 index = old_index + 1
 
-            content_type = ContentTypes.list
+            content_type = ContentTypes.list.value
 
         elif isinstance(item, element.Tag) and item.find('br') is not None and item.contents is not None:
             children = item.contents
@@ -387,7 +356,7 @@ def parse_description(id_hh, text, target_dict, start_index):
                 title = children[0].text
                 children = item.contents[1:]
                 index = old_index + 1
-            elif old_index > 0 and content_type == ContentTypes.block_title and old_content == '':
+            elif old_index > 0 and content_type == ContentTypes.block_title.value and old_content == '':
                 title = old_title
                 index = old_index
             else:
@@ -395,15 +364,15 @@ def parse_description(id_hh, text, target_dict, start_index):
                 index = old_index + 1
 
             content = '\n'.join([el.text for el in children if el.name != 'br' and len(el.text) > 1])
-            content_type = ContentTypes.list_br
+            content_type = ContentTypes.list_br.value
 
         else:
             # Обычный текстовый блок; если до этого тоже был текстовый блок, то объединяем
             content = item.text
-            if old_index > 0 and content_type == ContentTypes.block_title and old_content == '':
+            if old_index > 0 and content_type == ContentTypes.block_title.value and old_content == '':
                 title = old_title
                 index = old_index
-            elif old_index > 0 and content_type == ContentTypes.text:
+            elif old_index > 0 and content_type == ContentTypes.text.value:
                 content = f'{old_content}\n{content}'
                 title = old_title
                 index = old_index
@@ -411,7 +380,7 @@ def parse_description(id_hh, text, target_dict, start_index):
                 title = ''
                 index = old_index + 1
 
-            content_type = ContentTypes.text
+            content_type = ContentTypes.text.value
 
         if title is not None and len(title) > 0:
             title = cl.remove_description_postfix(title)
@@ -426,14 +395,14 @@ def parse_description(id_hh, text, target_dict, start_index):
             target_dict[index] = {'id': id_hh, 'title': title,
                                         'content': content,
                                         'content_type': content_type,
-                                        'semantic_type': SemanticTypes.unknown,
+                                        'semantic_type': SemanticTypes.unknown.value,
                                         'block_id': block_id}
 
             # если предыдущий блок - заголовок, а мы создаем новый заголовок,
             #  то предыдущий переводится в статус текстового блока
             if (old_index in target_dict.keys() and
-                    target_dict[old_index]['content_type'] == ContentTypes.block_title and old_content == ''):
-                target_dict[old_index]['content_type'] = ContentTypes.text
+                    target_dict[old_index]['content_type'] == ContentTypes.block_title.value and old_content == ''):
+                target_dict[old_index]['content_type'] = ContentTypes.text.value
                 target_dict[old_index]['content'] = target_dict[old_index]['title']
                 target_dict[old_index]['title'] = ''
 
